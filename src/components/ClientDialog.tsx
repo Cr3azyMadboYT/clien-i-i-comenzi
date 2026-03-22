@@ -41,6 +41,7 @@ export function ClientDialog({ open, onOpenChange, client, onSave }: ClientDialo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{client ? "Editare client" : "Client nou"}</DialogTitle>
+          <DialogDescription>{client ? "Modifică datele clientului." : "Completează datele noului client."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

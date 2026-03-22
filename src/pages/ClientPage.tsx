@@ -90,6 +90,15 @@ export default function ClientPage() {
     onError: () => toast.error("Eroare la ștergere"),
   });
 
+  if (clientError) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <p className="text-muted-foreground">Clientul nu a fost găsit sau a fost șters.</p>
+        <Button onClick={() => navigate("/")}>Înapoi la lista de clienți</Button>
+      </div>
+    );
+  }
+
   if (!client) return <div className="p-8 text-center text-muted-foreground">Se încarcă...</div>;
 
   return (

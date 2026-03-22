@@ -104,6 +104,7 @@ export function NewOrderDialog({ open, onOpenChange, products, clientPrices, onS
       <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Înregistrare nouă</DialogTitle>
+          <DialogDescription>Selectează produsele și completează detaliile comenzii.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

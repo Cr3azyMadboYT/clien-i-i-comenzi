@@ -31,7 +31,7 @@ export default function ClientPage() {
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const { data: client } = useQuery({ queryKey: ["client", id], queryFn: () => fetchClient(id!) });
+  const { data: client, error: clientError } = useQuery({ queryKey: ["client", id], queryFn: () => fetchClient(id!), retry: false });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: fetchProducts });
   const { data: clientPrices = [] } = useQuery({ queryKey: ["client-prices", id], queryFn: () => fetchClientPrices(id!) });
   const { data: orders = [] } = useQuery({ queryKey: ["client-orders", id], queryFn: () => fetchClientOrders(id!) });

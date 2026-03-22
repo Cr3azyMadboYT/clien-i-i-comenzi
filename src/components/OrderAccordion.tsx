@@ -38,7 +38,7 @@ export function OrderAccordion({ order, onUpdatePaid, onDelete }: OrderAccordion
 
       <div className={`bg-card rounded-xl border border-border shadow-sm overflow-hidden transition-all duration-300 ${
         zoomed
-          ? "fixed inset-4 sm:inset-8 md:inset-16 z-50 overflow-y-auto text-lg shadow-2xl"
+          ? "fixed z-50 shadow-2xl text-lg top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90vw] sm:w-[70vw] md:w-[50vw] max-h-[90vh] overflow-y-auto"
           : ""
       }`}>
         {/* Header */}

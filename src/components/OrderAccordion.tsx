@@ -23,9 +23,11 @@ export function OrderAccordion({ order, onUpdatePaid, onDelete }: OrderAccordion
   const remainingPieces = getOrderRemainingPieces(order.order_items);
   const date = new Date(order.created_at);
 
-  const productSummary = order.order_items
-    .map((i) => `${i.quantity}x ${i.products.name}`)
-    .join(", ");
+  const MAX_SHOWN = 2;
+  const productSummary = order.order_items.length <= MAX_SHOWN
+    ? order.order_items.map((i) => `${i.quantity}x ${i.products.name}`).join(", ")
+    : order.order_items.slice(0, MAX_SHOWN).map((i) => `${i.quantity}x ${i.products.name}`).join(", ") +
+      ` +${order.order_items.length - MAX_SHOWN} produse`;
 
   return (
     <>

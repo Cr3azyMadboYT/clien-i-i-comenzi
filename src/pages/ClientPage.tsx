@@ -27,6 +27,7 @@ export default function ClientPage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"active" | "history">("active");
   const [newOrderOpen, setNewOrderOpen] = useState(false);
+  const [expandAll, setExpandAll] = useState(false);
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 

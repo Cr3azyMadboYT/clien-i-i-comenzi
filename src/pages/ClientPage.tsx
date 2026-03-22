@@ -67,7 +67,10 @@ export default function ClientPage() {
       setNewOrderOpen(false);
       toast.success("Comandă salvată");
     },
-    onError: () => toast.error("Eroare la salvare"),
+    onError: (err: any) => {
+      const msg = err?.message?.includes("23503") ? "Clientul nu mai există. Reîncarcă pagina." : "Eroare la salvare";
+      toast.error(msg);
+    },
   });
 
   const updatePaidMutation = useMutation({

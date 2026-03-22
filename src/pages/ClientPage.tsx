@@ -125,16 +125,25 @@ export default function ClientPage() {
 
         {/* Action buttons - Înregistrare nouă + Istoric side by side */}
         <div className="flex gap-3 flex-wrap">
-          <Button className="flex-1 min-w-[160px] h-11" onClick={() => setNewOrderOpen(true)}>
+          <Button className="flex-1 min-w-[140px] h-11" onClick={() => setNewOrderOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Înregistrare nouă
           </Button>
           <Button
             variant={tab === "history" ? "default" : "outline"}
-            className="flex-1 min-w-[160px] h-11"
+            className="flex-1 min-w-[140px] h-11"
             onClick={() => setTab(tab === "history" ? "active" : "history")}
           >
             <History className="w-4 h-4 mr-2" /> Istoric ({historyOrders.length})
           </Button>
+          {filteredActive.length > 0 && tab === "active" && (
+            <Button
+              variant="outline"
+              className="h-11 px-4"
+              onClick={() => setExpandAll(true)}
+            >
+              <Maximize2 className="w-4 h-4 mr-2" /> Toate pe ecran
+            </Button>
+          )}
         </div>
 
         {/* Tab indicator */}

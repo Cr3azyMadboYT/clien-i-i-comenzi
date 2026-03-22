@@ -31,7 +31,7 @@ export default function ClientPage() {
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
-  const { data: client } = useQuery({ queryKey: ["client", id], queryFn: () => fetchClient(id!) });
+  const { data: client, error: clientError } = useQuery({ queryKey: ["client", id], queryFn: () => fetchClient(id!), retry: false });
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: fetchProducts });
   const { data: clientPrices = [] } = useQuery({ queryKey: ["client-prices", id], queryFn: () => fetchClientPrices(id!) });
   const { data: orders = [] } = useQuery({ queryKey: ["client-orders", id], queryFn: () => fetchClientOrders(id!) });
@@ -67,7 +67,10 @@ export default function ClientPage() {
       setNewOrderOpen(false);
       toast.success("Comandă salvată");
     },
-    onError: () => toast.error("Eroare la salvare"),
+    onError: (err: any) => {
+      const msg = err?.message?.includes("23503") ? "Clientul nu mai există. Reîncarcă pagina." : "Eroare la salvare";
+      toast.error(msg);
+    },
   });
 
   const updatePaidMutation = useMutation({
@@ -89,6 +92,15 @@ export default function ClientPage() {
     },
     onError: () => toast.error("Eroare la ștergere"),
   });
+
+  if (clientError) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <p className="text-muted-foreground">Clientul nu a fost găsit sau a fost șters.</p>
+        <Button onClick={() => navigate("/")}>Înapoi la lista de clienți</Button>
+      </div>
+    );
+  }
 
   if (!client) return <div className="p-8 text-center text-muted-foreground">Se încarcă...</div>;
 

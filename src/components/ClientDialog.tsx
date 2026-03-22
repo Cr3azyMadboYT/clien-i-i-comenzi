@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -41,6 +41,7 @@ export function ClientDialog({ open, onOpenChange, client, onSave }: ClientDialo
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{client ? "Editare client" : "Client nou"}</DialogTitle>
+          <DialogDescription>{client ? "Modifică datele clientului." : "Completează datele noului client."}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

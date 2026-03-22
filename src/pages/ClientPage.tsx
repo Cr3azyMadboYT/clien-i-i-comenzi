@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Phone, StickyNote, Filter, History } from "lucide-react";
+import { ArrowLeft, Plus, Phone, StickyNote, Filter, History, Maximize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderAccordion } from "@/components/OrderAccordion";
 import { OrderHistorySection } from "@/components/OrderHistorySection";
@@ -27,6 +27,7 @@ export default function ClientPage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<"active" | "history">("active");
   const [newOrderOpen, setNewOrderOpen] = useState(false);
+  const [expandAll, setExpandAll] = useState(false);
   const [sizeFilter, setSizeFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
@@ -124,16 +125,25 @@ export default function ClientPage() {
 
         {/* Action buttons - Înregistrare nouă + Istoric side by side */}
         <div className="flex gap-3 flex-wrap">
-          <Button className="flex-1 min-w-[160px] h-11" onClick={() => setNewOrderOpen(true)}>
+          <Button className="flex-1 min-w-[140px] h-11" onClick={() => setNewOrderOpen(true)}>
             <Plus className="w-4 h-4 mr-2" /> Înregistrare nouă
           </Button>
           <Button
             variant={tab === "history" ? "default" : "outline"}
-            className="flex-1 min-w-[160px] h-11"
+            className="flex-1 min-w-[140px] h-11"
             onClick={() => setTab(tab === "history" ? "active" : "history")}
           >
             <History className="w-4 h-4 mr-2" /> Istoric ({historyOrders.length})
           </Button>
+          {filteredActive.length > 0 && tab === "active" && (
+            <Button
+              variant="outline"
+              className="h-11 px-4"
+              onClick={() => setExpandAll(true)}
+            >
+              <Maximize2 className="w-4 h-4 mr-2" /> Toate pe ecran
+            </Button>
+          )}
         </div>
 
         {/* Tab indicator */}
@@ -198,6 +208,63 @@ export default function ClientPage() {
           <OrderHistorySection orders={filteredHistory} />
         )}
       </main>
+
+      {/* Expand-all overlay for photo */}
+      {expandAll && (
+        <div className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm overflow-auto">
+          <div className="sticky top-0 z-10 bg-background/90 backdrop-blur border-b border-border px-4 py-3 flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-foreground">{client?.name} — comenzi active</h2>
+              <p className="text-xs text-muted-foreground">{filteredActive.length} comenzi · De plată: {totalDebt.toLocaleString("ro-RO")} lei · {totalPieces} buc.</p>
+            </div>
+            <Button variant="ghost" size="icon" onClick={() => setExpandAll(false)}>
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+          <div className={`p-4 grid gap-3 ${
+            filteredActive.length <= 2 ? "grid-cols-1 sm:grid-cols-2 max-w-3xl mx-auto" :
+            filteredActive.length <= 4 ? "grid-cols-2 md:grid-cols-2" :
+            filteredActive.length <= 6 ? "grid-cols-2 md:grid-cols-3" :
+            "grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+          }`}>
+            {filteredActive.map((order) => {
+              const orderStatus = getOrderStatus(order.order_items);
+              const orderRemaining = getOrderRemainingAmount(order.order_items);
+              const orderPieces = getOrderRemainingPieces(order.order_items);
+              const date = new Date(order.created_at);
+              return (
+                <div key={order.id} className="bg-card rounded-xl border border-border shadow-sm p-3 text-sm space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {date.toLocaleDateString("ro-RO")} {date.toLocaleTimeString("ro-RO", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+                      orderStatus === "achitat" ? "bg-green-100 text-green-700" :
+                      orderStatus === "partial" ? "bg-amber-100 text-amber-700" :
+                      "bg-orange-100 text-orange-700"
+                    }`}>{orderStatus}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {order.order_items.map((item) => {
+                      const left = item.quantity - item.paid_quantity;
+                      return (
+                        <div key={item.id} className="flex justify-between text-xs">
+                          <span className="truncate mr-2">{item.products.name}</span>
+                          <span className="shrink-0 font-medium debt-text">{left} buc · {(left * item.unit_price).toLocaleString("ro-RO")} lei</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="pt-1 border-t border-border flex justify-between font-semibold text-xs">
+                    <span className="debt-text">De plată: {orderRemaining.toLocaleString("ro-RO")} lei</span>
+                    <span className="debt-text">{orderPieces} buc.</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <NewOrderDialog
         open={newOrderOpen}

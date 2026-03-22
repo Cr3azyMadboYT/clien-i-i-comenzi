@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Phone, StickyNote, Filter, History } from "lucide-react";
+import { ArrowLeft, Plus, Phone, StickyNote, Filter, History, Maximize2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderAccordion } from "@/components/OrderAccordion";
 import { OrderHistorySection } from "@/components/OrderHistorySection";

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Plus, Phone, StickyNote, Filter } from "lucide-react";
+import { ArrowLeft, Plus, Phone, StickyNote, Filter, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OrderAccordion } from "@/components/OrderAccordion";
 import { OrderHistorySection } from "@/components/OrderHistorySection";
@@ -38,7 +38,6 @@ export default function ClientPage() {
   const activeOrders = useMemo(() => orders.filter((o) => getOrderStatus(o.order_items) !== "achitat"), [orders]);
   const historyOrders = useMemo(() => orders.filter((o) => getOrderStatus(o.order_items) === "achitat"), [orders]);
 
-  // Filtering
   const filterOrders = (list: typeof orders) => {
     return list.filter((o) => {
       return o.order_items.some((item) => {
@@ -123,26 +122,34 @@ export default function ClientPage() {
           </div>
         </div>
 
-        {/* New order + Tabs */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button onClick={() => setNewOrderOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Înregistrare nouă
+        {/* Action buttons - Înregistrare nouă + Istoric side by side */}
+        <div className="flex gap-3 flex-wrap">
+          <Button className="flex-1 min-w-[160px] h-11" onClick={() => setNewOrderOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Înregistrare nouă
           </Button>
-          <div className="flex-1" />
-          <div className="flex bg-muted rounded-lg p-0.5">
-            <button
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "active" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
-              onClick={() => setTab("active")}
-            >
-              Active ({activeOrders.length})
-            </button>
-            <button
-              className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "history" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
-              onClick={() => setTab("history")}
-            >
-              Istoric ({historyOrders.length})
-            </button>
-          </div>
+          <Button
+            variant={tab === "history" ? "default" : "outline"}
+            className="flex-1 min-w-[160px] h-11"
+            onClick={() => setTab(tab === "history" ? "active" : "history")}
+          >
+            <History className="w-4 h-4 mr-2" /> Istoric ({historyOrders.length})
+          </Button>
+        </div>
+
+        {/* Tab indicator */}
+        <div className="flex bg-muted rounded-lg p-0.5">
+          <button
+            className={`flex-1 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "active" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+            onClick={() => setTab("active")}
+          >
+            Active ({activeOrders.length})
+          </button>
+          <button
+            className={`flex-1 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${tab === "history" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground"}`}
+            onClick={() => setTab("history")}
+          >
+            Istoric ({historyOrders.length})
+          </button>
         </div>
 
         {/* Filters */}

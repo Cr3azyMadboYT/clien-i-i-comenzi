@@ -3,24 +3,9 @@ import type { Tables } from "@/integrations/supabase/types";
 
 export type Client = Tables<"clients">;
 export type Product = Tables<"products">;
-export type Order = Tables<"orders">;
-export type OrderItem = Tables<"order_items">;
+export type ClientBalance = Tables<"client_balances">;
+export type ClientHistory = Tables<"client_history">;
 export type ClientPrice = Tables<"client_prices">;
-export type PaymentHistory = Tables<"payment_history">;
-
-export type OrderWithItems = Order & {
-  order_items: (OrderItem & { products: Product })[];
-};
-
-// Fetch all products sorted
-export async function fetchProducts() {
-  const { data, error } = await supabase
-    .from("products")
-    .select("*")
-    .order("sort_order");
-  if (error) throw error;
-  return data;
-}
 
 // Fetch all clients
 export async function fetchClients() {
@@ -72,6 +57,35 @@ export async function deleteClient(id: string) {
   if (error) throw error;
 }
 
+// Fetch all products sorted
+export async function fetchProducts() {
+  const { data, error } = await supabase
+    .from("products")
+    .select("*")
+    .order("sort_order");
+  if (error) throw error;
+  return data;
+}
+
+// Fetch client balances
+export async function fetchClientBalances(clientId: string) {
+  const { data, error } = await supabase
+    .from("client_balances")
+    .select("*")
+    .eq("client_id", clientId);
+  if (error) throw error;
+  return data;
+}
+
+// Fetch all balances (for dashboard totals)
+export async function fetchAllBalances() {
+  const { data, error } = await supabase
+    .from("client_balances")
+    .select("*, products(*)");
+  if (error) throw error;
+  return data as (ClientBalance & { products: Product })[];
+}
+
 // Fetch client prices
 export async function fetchClientPrices(clientId: string) {
   const { data, error } = await supabase
@@ -82,127 +96,71 @@ export async function fetchClientPrices(clientId: string) {
   return data;
 }
 
-// Upsert client price
-export async function upsertClientPrice(clientId: string, productId: string, price: number) {
-  const { error } = await supabase
-    .from("client_prices")
+// Update balance (add or subtract)
+export async function updateBalance(
+  clientId: string,
+  productId: string,
+  quantity: number,
+  actionType: "adaugat" | "scazut"
+) {
+  // Get current balance
+  const { data: existing } = await supabase
+    .from("client_balances")
+    .select("*")
+    .eq("client_id", clientId)
+    .eq("product_id", productId)
+    .maybeSingle();
+
+  const currentQty = existing?.quantity ?? 0;
+  const newQty = actionType === "adaugat"
+    ? currentQty + quantity
+    : Math.max(0, currentQty - quantity);
+
+  // Upsert balance
+  const { error: balError } = await supabase
+    .from("client_balances")
     .upsert(
-      { client_id: clientId, product_id: productId, custom_price: price },
+      {
+        client_id: clientId,
+        product_id: productId,
+        quantity: newQty,
+        last_updated_at: new Date().toISOString(),
+      },
       { onConflict: "client_id,product_id" }
     );
-  if (error) throw error;
+  if (balError) throw balError;
+
+  // Insert history
+  const { error: histError } = await supabase
+    .from("client_history")
+    .insert({
+      client_id: clientId,
+      product_id: productId,
+      action_type: actionType,
+      quantity,
+    });
+  if (histError) throw histError;
 }
 
-// Create order with items
-export async function createOrder(
-  clientId: string,
-  items: { product_id: string; quantity: number; unit_price: number }[],
-  notes?: string,
-  createdAt?: string
-) {
-  const orderData: { client_id: string; notes?: string; created_at?: string } = { client_id: clientId };
-  if (notes) orderData.notes = notes;
-  if (createdAt) orderData.created_at = createdAt;
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert(orderData)
-    .select()
-    .single();
-  if (orderError) throw orderError;
-
-  const orderItems = items.map((item) => ({
-    order_id: order.id,
-    product_id: item.product_id,
-    quantity: item.quantity,
-    unit_price: item.unit_price,
-    paid_quantity: 0,
-  }));
-
-  const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
-  if (itemsError) throw itemsError;
-
-  // Update client prices for future orders
-  for (const item of items) {
-    await upsertClientPrice(clientId, item.product_id, item.unit_price);
-  }
-
-  return order;
-}
-
-// Fetch orders with items for a client
-export async function fetchClientOrders(clientId: string) {
+// Fetch client history
+export async function fetchClientHistory(clientId: string) {
   const { data, error } = await supabase
-    .from("orders")
-    .select("*, order_items(*, products(*))")
+    .from("client_history")
+    .select("*, products(*)")
     .eq("client_id", clientId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return data as OrderWithItems[];
+  return data as (ClientHistory & { products: Product })[];
 }
 
-// Fetch all orders with items (for dashboard)
-export async function fetchAllOrders() {
-  const { data, error } = await supabase
-    .from("orders")
-    .select("*, order_items(*, products(*))");
-  if (error) throw error;
-  return data as OrderWithItems[];
-}
-
-// Update paid quantity
-export async function updatePaidQuantity(orderItemId: string, newPaidQty: number, oldPaidQty: number) {
-  const { error: updateError } = await supabase
-    .from("order_items")
-    .update({ paid_quantity: newPaidQty })
-    .eq("id", orderItemId);
-  if (updateError) throw updateError;
-
-  const diff = newPaidQty - oldPaidQty;
-  if (diff !== 0) {
-    const { error: histError } = await supabase
-      .from("payment_history")
-      .insert({ order_item_id: orderItemId, quantity_paid: diff });
-    if (histError) throw histError;
-  }
-}
-
-// Fetch payment history for an order
-export async function fetchPaymentHistory(orderItemIds: string[]) {
-  const { data, error } = await supabase
-    .from("payment_history")
-    .select("*, order_items(*, products(*))")
-    .in("order_item_id", orderItemIds)
-    .order("paid_at", { ascending: false });
-  if (error) throw error;
-  return data;
-}
-
-// Delete order
-export async function deleteOrder(orderId: string) {
-  const { error } = await supabase.from("orders").delete().eq("id", orderId);
-  if (error) throw error;
-}
-
-// Helpers for status calculation
-export function getItemStatus(item: OrderItem): "achitat" | "partial" | "neachitat" {
-  if (item.paid_quantity >= item.quantity) return "achitat";
-  if (item.paid_quantity > 0) return "partial";
-  return "neachitat";
-}
-
-export function getOrderStatus(items: OrderItem[]): "achitat" | "partial" | "neachitat" {
-  const allPaid = items.every((i) => i.paid_quantity >= i.quantity);
-  if (allPaid) return "achitat";
-  const allUnpaid = items.every((i) => i.paid_quantity === 0);
-  if (allUnpaid) return "neachitat";
-  return "partial";
-}
-
-export function getOrderRemainingAmount(items: (OrderItem & { products?: Product })[]) {
-  return items.reduce((sum, i) => sum + (i.quantity - i.paid_quantity) * i.unit_price, 0);
-}
-
-export function getOrderRemainingPieces(items: OrderItem[]) {
-  return items.reduce((sum, i) => sum + (i.quantity - i.paid_quantity), 0);
+// Get price for a client+product
+export function getClientPrice(
+  productId: string,
+  clientPrices: ClientPrice[],
+  products: Product[]
+): number {
+  const cp = clientPrices.find((p) => p.product_id === productId);
+  if (cp) return Number(cp.custom_price);
+  const prod = products.find((p) => p.id === productId);
+  return prod ? Number(prod.base_price) : 0;
 }

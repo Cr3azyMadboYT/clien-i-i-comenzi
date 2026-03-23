@@ -63,7 +63,7 @@ export function PipeCard({ productName, quantity, amount, lastUpdated, onAdd, on
           </p>
         </div>
 
-        <p className="text-xs text-muted-foreground">Ultima actualizare: {formattedDate}</p>
+        <p className="text-sm font-semibold text-muted-foreground">Ultima actualizare: {formattedDate}</p>
 
         <div className="flex gap-2 mt-auto">
           <Button

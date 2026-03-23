@@ -14,6 +14,87 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_balances: {
+        Row: {
+          client_id: string
+          id: string
+          last_updated_at: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          client_id: string
+          id?: string
+          last_updated_at?: string
+          product_id: string
+          quantity?: number
+        }
+        Update: {
+          client_id?: string
+          id?: string
+          last_updated_at?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_balances_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_balances_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_history: {
+        Row: {
+          action_type: string
+          client_id: string
+          created_at: string
+          id: string
+          product_id: string
+          quantity: number
+        }
+        Insert: {
+          action_type: string
+          client_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          quantity: number
+        }
+        Update: {
+          action_type?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_history_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_prices: {
         Row: {
           client_id: string

@@ -6,16 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DashboardCards } from "@/components/DashboardCards";
 import { ClientDialog } from "@/components/ClientDialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import {
   fetchClients,
-  fetchAllOrders,
+  fetchAllBalances,
+  fetchProducts,
   createClient,
   updateClient,
   deleteClient,
-  getOrderRemainingAmount,
-  getOrderRemainingPieces,
-  getOrderStatus,
   type Client,
 } from "@/lib/supabase-helpers";
 import { toast } from "sonner";
@@ -28,39 +36,56 @@ export default function Index() {
   const [editingClient, setEditingClient] = useState<Client | null>(null);
 
   const { data: clients = [] } = useQuery({ queryKey: ["clients"], queryFn: fetchClients });
-  const { data: allOrders = [] } = useQuery({ queryKey: ["all-orders"], queryFn: fetchAllOrders });
+  const { data: allBalances = [] } = useQuery({ queryKey: ["all-balances"], queryFn: fetchAllBalances });
+  const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: fetchProducts });
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; phone?: string; notes?: string }) => createClient(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["clients"] }); setDialogOpen(false); toast.success("Client adăugat"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      setDialogOpen(false);
+      toast.success("Client adăugat");
+    },
     onError: () => toast.error("Eroare la adăugare"),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: { name?: string; phone?: string | null; notes?: string | null } }) => updateClient(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["clients"] }); setDialogOpen(false); setEditingClient(null); toast.success("Client actualizat"); },
+    mutationFn: ({ id, data }: { id: string; data: { name?: string; phone?: string | null; notes?: string | null } }) =>
+      updateClient(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      setDialogOpen(false);
+      setEditingClient(null);
+      toast.success("Client actualizat");
+    },
     onError: () => toast.error("Eroare la actualizare"),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteClient,
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["clients"] }); queryClient.invalidateQueries({ queryKey: ["all-orders"] }); toast.success("Client șters"); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["all-balances"] });
+      toast.success("Client șters");
+    },
     onError: () => toast.error("Eroare la ștergere"),
   });
 
-  // Active orders only (not fully paid)
-  const activeOrders = allOrders.filter((o) => getOrderStatus(o.order_items) !== "achitat");
+  // Calculate totals from balances
+  const totalDebt = allBalances.reduce((sum, b) => {
+    const price = Number(b.products?.base_price ?? 0);
+    return sum + b.quantity * price;
+  }, 0);
+  const totalUnpaidPieces = allBalances.reduce((sum, b) => sum + b.quantity, 0);
 
-  const totalDebt = activeOrders.reduce((s, o) => s + getOrderRemainingAmount(o.order_items), 0);
-  const totalUnpaidPieces = activeOrders.reduce((s, o) => s + getOrderRemainingPieces(o.order_items), 0);
-
-  // Debt per client
+  // Per-client debt
   const clientDebt = new Map<string, { amount: number; pieces: number }>();
-  activeOrders.forEach((o) => {
-    const prev = clientDebt.get(o.client_id) || { amount: 0, pieces: 0 };
-    prev.amount += getOrderRemainingAmount(o.order_items);
-    prev.pieces += getOrderRemainingPieces(o.order_items);
-    clientDebt.set(o.client_id, prev);
+  allBalances.forEach((b) => {
+    const prev = clientDebt.get(b.client_id) || { amount: 0, pieces: 0 };
+    const price = Number(b.products?.base_price ?? 0);
+    prev.amount += b.quantity * price;
+    prev.pieces += b.quantity;
+    clientDebt.set(b.client_id, prev);
   });
 
   const filtered = clients.filter(
@@ -71,7 +96,10 @@ export default function Index() {
 
   function handleSave(data: { name: string; phone?: string; notes?: string }) {
     if (editingClient) {
-      updateMutation.mutate({ id: editingClient.id, data: { name: data.name, phone: data.phone || null, notes: data.notes || null } });
+      updateMutation.mutate({
+        id: editingClient.id,
+        data: { name: data.name, phone: data.phone || null, notes: data.notes || null },
+      });
     } else {
       createMutation.mutate(data);
     }
@@ -79,7 +107,6 @@ export default function Index() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <h1 className="text-xl font-bold text-foreground tracking-tight">Evidență Clienți</h1>
@@ -90,7 +117,6 @@ export default function Index() {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         <DashboardCards totalClients={clients.length} totalDebt={totalDebt} totalUnpaidPieces={totalUnpaidPieces} />
 
-        {/* Search + Add */}
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -106,7 +132,6 @@ export default function Index() {
           </Button>
         </div>
 
-        {/* Client list */}
         <div className="space-y-2">
           {filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">Nu există clienți.</p>
@@ -153,7 +178,7 @@ export default function Index() {
                       <AlertDialogContent>
                         <AlertDialogHeader>
                           <AlertDialogTitle>Șterge clientul?</AlertDialogTitle>
-                          <AlertDialogDescription>Toate comenzile și datele clientului vor fi șterse.</AlertDialogDescription>
+                          <AlertDialogDescription>Toate datele clientului vor fi șterse.</AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                           <AlertDialogCancel>Anulează</AlertDialogCancel>
